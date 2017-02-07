@@ -7,8 +7,9 @@ import paho.mqtt.client as mqtt
 from prometheus_client import CollectorRegistry, Gauge, push_to_gateway
 
 
-key_map = {'Temperature': 'temp_c',
-           'Humidity': 'relative_humidity'}
+# Format is "MQTT name" -> ("Prometheus name", "Scaling factor")
+key_map = {'Temperature': ('temp_c', 1.0),
+           'Humidity': ('relative_humidity', 100.0)}
 
 
 class MyClient(mqtt.Client):
@@ -42,7 +43,7 @@ class MyClient(mqtt.Client):
         if 'DHT' in data:
             for key in data['DHT']:
                 print '%s -> %s = %s' %(sender, key, data['DHT'][key])
-                Gauge(key_map[key], '', registry=registry).set(data['DHT'][key])
+                Gauge(key_map[key][0], '', registry=registry).set(float(data['DHT'][key]) / key_map[key][1])
         push_to_gateway('localhost:9091', job='mqtt',
                         grouping_key={'instance': sender},
                         registry=registry)
